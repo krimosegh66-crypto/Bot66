@@ -72,7 +72,7 @@ code{background:var(--input);padding:2px 4px;border-radius:4px;color:var(--green
 <div id="stealth"></div>
 
 <header>
-  <h1>⛏️ OmniMiner <span style="font-size:9px;opacity:.5">v8.0 · Public Pool</span></h1>
+  <h1>⛏️ OmniMiner <span style="font-size:9px;opacity:.5">v8.1 · Public Pool (Proxy)</span></h1>
   <div class="hstat">
     <span class="mode off" id="modeBadge">⚪ غير متصل</span>
     <div class="dot" id="connDot"></div>
@@ -88,7 +88,7 @@ code{background:var(--input);padding:2px 4px;border-radius:4px;color:var(--green
 <main>
   <!-- تبويب التعدين -->
   <div class="panel active" id="p1">
-    <div class="warn-strip" id="offlineStrip">جاري الاتصال بـ Public Pool API...</div>
+    <div class="warn-strip" id="offlineStrip">جاري الاتصال بـ Public Pool عبر وسيط...</div>
     <div class="grid">
       <div class="stat"><div class="l">السرعة (آخر 10 د)</div><div class="v big" id="mHash">0</div><div class="s" id="mHashUnit">H/s</div></div>
       <div class="stat b"><div class="l">أفضل صعوبة</div><div class="v" id="mBest">0</div><div class="s">best difficulty</div></div>
@@ -154,7 +154,7 @@ code{background:var(--input);padding:2px 4px;border-radius:4px;color:var(--green
     </div>
   </div>
 </main>
-<footer>OmniMiner v8.0 · Public Pool API · لا يوجد تعدين داخل المتصفح.</footer>
+<footer>OmniMiner v8.1 · Public Pool API عبر وسيط CORS · لا يوجد تعدين داخل المتصفح.</footer>
 
 <script>
 "use strict";
@@ -162,7 +162,13 @@ code{background:var(--input);padding:2px 4px;border-radius:4px;color:var(--green
 /* ═══════ ثوابت ═══════ */
 const WALLET_ADDR = 'bc1qddn6a3szw0zkd0ykagp4nvckfqur26nwpl883j';
 const API_BASE    = 'https://public-pool.io:40557/api';
-const POLL_MS     = 5000;
+const PROXIES     = [
+  'https://api.allorigins.win/raw?url=',
+  'https://corsproxy.io/?url=',
+  'https://cors.lol/?url='
+];
+let proxyIndex = 0;
+const POLL_MS  = 5000;
 
 /* ═══════ مساعدات ═══════ */
 const $ = id => document.getElementById(id);
@@ -189,6 +195,41 @@ function fmtNum(n){
   if (n >= 1e6)  return (n/1e6).toFixed(2)  + 'M';
   if (n >= 1e3)  return (n/1e3).toFixed(2)  + 'K';
   return n.toLocaleString();
+}
+
+/* ═══════ طلب عبر وسيط ═══════ */
+async function proxiedFetch(path){
+  const target = API_BASE + path;
+  const encoded = encodeURIComponent(target);
+
+  for (let attempt = 0; attempt < PROXIES.length; attempt++){
+    const idx = (proxyIndex + attempt) % PROXIES.length;
+    const url = PROXIES[idx] + encoded;
+    try {
+      const r = await fetch(url, { cache: 'no-store' });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+
+      const ct = r.headers.get('content-type') || '';
+      // allorigins /raw يرجع JSON مباشر، /get يرجع JSON ملفوف
+      let data;
+      if (ct.includes('application/json')){
+        data = await r.json();
+        // إذا كان ملفوفاً ({ contents: "..." })
+        if (data && typeof data.contents === 'string'){
+          data = JSON.parse(data.contents);
+        }
+      } else {
+        const text = await r.text();
+        data = JSON.parse(text);
+      }
+      if (data && data.error) throw new Error(data.error);
+      proxyIndex = idx;  // تثبيت الوسيط الناجح
+      return data;
+    } catch (e){
+      // جرّب الوسيط التالي
+      if (attempt === PROXIES.length - 1) throw e;
+    }
+  }
 }
 
 /* ═══════ الحالة ═══════ */
@@ -225,29 +266,6 @@ function drawChart(){
     i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
   });
   ctx.stroke();
-}
-
-/* ═══════ جلب بيانات العميل ═══════ */
-async function fetchClient(){
-  const r = await fetch(API_BASE + '/client/' + WALLET_ADDR, { cache:'no-store' });
-  if (!r.ok) throw new Error('HTTP ' + r.status);
-  return r.json();
-}
-
-/* ═══════ جلب بيانات الشبكة ═══════ */
-async function fetchNetwork(){
-  const r = await fetch(API_BASE + '/network', { cache:'no-store' });
-  if (!r.ok) throw new Error('HTTP ' + r.status);
-  return r.json();
-}
-
-/* ═══════ جلب بيانات الرسم البياني ═══════ */
-async function fetchChart(){
-  try {
-    const r = await fetch(API_BASE + '/client/' + WALLET_ADDR + '/chart', { cache:'no-store' });
-    if (!r.ok) return [];
-    return await r.json();
-  } catch { return []; }
 }
 
 /* ═══════ تحديث الواجهة ═══════ */
@@ -288,9 +306,12 @@ function applyNetwork(d){
 /* ═══════ الدورة الرئيسية ═══════ */
 async function poll(){
   try {
-    const [client, network] = await Promise.all([fetchClient(), fetchNetwork()]);
+    const [client, network] = await Promise.all([
+      proxiedFetch('/client/' + WALLET_ADDR),
+      proxiedFetch('/network')
+    ]);
 
-    if (!S.connected) logEvent('✅ تم الاتصال بـ Public Pool API', 'ok');
+    if (!S.connected) logEvent('✅ تم الاتصال بـ Public Pool (عبر وسيط)', 'ok');
     S.connected = true;
     $('modeBadge').textContent = '🔗 Public Pool';
     $('modeBadge').className   = 'mode real';
@@ -300,18 +321,20 @@ async function poll(){
     applyClient(client);
     applyNetwork(network);
 
-    const chart = await fetchChart();
-    if (Array.isArray(chart) && chart.length > 1){
-      S.hist = chart.map(p => Number(p.hashrate) || 0).slice(-100);
-      drawChart();
-    }
+    try {
+      const chart = await proxiedFetch('/client/' + WALLET_ADDR + '/chart');
+      if (Array.isArray(chart) && chart.length > 1){
+        S.hist = chart.map(p => Number(p.hashrate) || 0).slice(-100);
+        drawChart();
+      }
+    } catch { /* الرسم البياني اختياري */ }
   } catch (e){
     S.connected = false;
     $('modeBadge').textContent = '⚪ غير متصل';
     $('modeBadge').className   = 'mode off';
     $('connDot').className     = 'dot';
     $('offlineStrip').style.display = 'block';
-    $('offlineStrip').textContent = '⚠️ تعذّر الاتصال بـ Public Pool API — ' + e.message;
+    $('offlineStrip').textContent = '⚠️ تعذّر الاتصال — ' + e.message;
     logEvent('⚠️ ' + e.message, 'warn');
   }
 }
@@ -343,7 +366,7 @@ $('btnRefresh').addEventListener('click', () => { logEvent('🔄 تحديث يد
 
 /* ═══════ تهيئة ═══════ */
 (function init(){
-  logEvent('🚀 OmniMiner v8.0 — Public Pool API', 'ok');
+  logEvent('🚀 OmniMiner v8.1 — Public Pool (Proxy)', 'ok');
   logEvent('📡 العنوان: ' + WALLET_ADDR.slice(0, 16) + '...');
   poll();
 })();
