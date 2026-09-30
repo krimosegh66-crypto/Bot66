@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>⛏️ OmniMiner — لوحة التعدين</title>
+<title>⛏️ OmniMiner — لوحة تعدين البيتكوين العامة</title>
 <style>
 :root{
   --bg:#050508;--panel:#0c0e12;--card:#14161c;--input:#0a0c10;
@@ -45,11 +45,8 @@ main{flex:1;overflow:hidden;position:relative}
 .stat .v{font-size:24px;font-weight:bold;color:#fff;margin-top:4px}
 .stat .v.big{font-size:34px;color:var(--green)}
 .stat .s{font-size:10px;color:var(--txt3);margin-top:2px}
-input[type=text],input[type=password]{width:100%;background:var(--input);border:1px solid var(--border);color:var(--green);padding:8px 10px;font-family:inherit;font-size:12px;border-radius:6px;outline:none}
-input:focus{border-color:var(--green);box-shadow:0 0 6px rgba(0,232,157,.15)}
 .btn{width:100%;background:rgba(0,232,157,.08);border:1px solid var(--green);color:var(--green);padding:9px 12px;cursor:pointer;font-family:inherit;font-size:11px;border-radius:6px;transition:.15s;display:flex;align-items:center;justify-content:center;gap:6px;text-decoration:none}
 .btn:hover{background:var(--green);color:#000}
-.btn:disabled{opacity:.35;cursor:not-allowed;pointer-events:none}
 .btn.red{border-color:var(--red);color:var(--red);background:rgba(255,51,68,.08)}
 .btn.red:hover{background:var(--red);color:#000}
 .btn.blue{border-color:var(--blue);color:var(--blue);background:rgba(0,180,255,.08)}
@@ -59,147 +56,143 @@ input:focus{border-color:var(--green);box-shadow:0 0 6px rgba(0,232,157,.15)}
 .row{display:flex;gap:8px}
 .row .btn{flex:1}
 canvas{width:100%;height:130px;background:#0d1117;border:1px solid var(--border2);border-radius:10px;margin-bottom:14px;display:block}
-.logbox{background:var(--input);border:1px solid var(--border2);border-radius:8px;padding:10px;height:280px;overflow-y:auto;font-size:11px;display:flex;flex-direction:column-reverse}
-.log{padding:3px 0;border-bottom:1px solid var(--border2);color:var(--txt2)}
+.logbox{background:var(--input);border:1px solid var(--border2);border-radius:8px;padding:10px;height:240px;overflow-y:auto;font-size:11px;display:flex;flex-direction:column-reverse}
+.log{padding:3px 0;border-bottom:1px solid var(--border2);color:var(--txt2);white-space:pre-wrap;word-break:break-word}
 .log.ok{color:var(--green)}
 .log.warn{color:var(--yellow)}
 .log.err{color:var(--red)}
-.settings{background:var(--card);border:1px solid var(--border2);border-radius:10px;padding:14px;margin:14px 0}
-.settings input{margin:6px 0;text-align:left;direction:ltr}
 .hidden{display:none}
-.gear{cursor:pointer;font-size:18px;user-select:none}
 .addr{font-family:'Courier New',monospace;color:var(--blue);word-break:break-all;font-size:12px}
 .warn-strip{background:rgba(255,183,77,.08);border:1px solid rgba(255,183,77,.3);color:var(--yellow);font-size:10px;padding:6px 12px;border-radius:8px;margin-bottom:12px;text-align:center}
 footer{font-size:9px;color:var(--txt3);text-align:center;padding:6px}
+code{background:var(--input);padding:2px 4px;border-radius:4px;color:var(--green)}
 </style>
 </head>
 <body class="crt">
 <div id="stealth"></div>
 
 <header>
-  <h1>⛏️ OmniMiner <span style="font-size:9px;opacity:.5">v7.0</span></h1>
+  <h1>⛏️ OmniMiner <span style="font-size:9px;opacity:.5">v8.0 · Public Pool</span></h1>
   <div class="hstat">
     <span class="mode off" id="modeBadge">⚪ غير متصل</span>
     <div class="dot" id="connDot"></div>
-    <span class="gear" id="gearBtn" title="إعدادات الاتصال">⚙️</span>
   </div>
 </header>
 
-<div class="settings hidden" id="settings">
-  <h3>🔗 الاتصال بـ XMRig عبر النفق</h3>
-  <div style="font-size:10px;color:var(--txt2);margin-bottom:6px">
-    رابط نفق cloudflared + توكن HTTP API (نفس قيمة http.access-token في config.json)
-  </div>
-  <input type="text" id="apiUrl" placeholder="https://xxxx.trycloudflare.com" autocomplete="off" spellcheck="false">
-  <input type="password" id="apiToken" placeholder="API Token" autocomplete="off">
-  <div class="row" style="margin-top:6px">
-    <button class="btn" id="btnSave">💾 حفظ واتصال</button>
-    <button class="btn red" id="btnClear">✂️ فصل</button>
-  </div>
-  <div id="connMsg" style="font-size:10px;margin-top:6px;color:var(--txt2)"></div>
-</div>
-
 <nav>
   <button class="tab active" data-tab="p1">⛏️ التعدين</button>
-  <button class="tab" data-tab="p2">📋 السجل</button>
+  <button class="tab" data-tab="p2">🌐 الشبكة</button>
   <button class="tab" data-tab="p3">💰 المحفظة</button>
 </nav>
 
 <main>
   <!-- تبويب التعدين -->
   <div class="panel active" id="p1">
-    <div class="warn-strip" id="offlineStrip">غير متصل — اضغط ⚙️ وأدخل رابط النفق وتوكن XMRig.</div>
+    <div class="warn-strip" id="offlineStrip">جاري الاتصال بـ Public Pool API...</div>
     <div class="grid">
-      <div class="stat"><div class="l">السرعة الحالية</div><div class="v big" id="mHash">0</div><div class="s" id="mHashUnit">H/s</div></div>
-      <div class="stat b"><div class="l">أعلى سرعة</div><div class="v" id="mMax">0</div><div class="s">H/s</div></div>
-      <div class="stat o"><div class="l">الحصص مقبولة/مرفوضة</div><div class="v" id="mShares">0/0</div><div class="s">shares</div></div>
-      <div class="stat"><div class="l">مدة التشغيل</div><div class="v" id="mUptime">0ث</div><div class="s" id="mPool">—</div></div>
+      <div class="stat"><div class="l">السرعة (آخر 10 د)</div><div class="v big" id="mHash">0</div><div class="s" id="mHashUnit">H/s</div></div>
+      <div class="stat b"><div class="l">أفضل صعوبة</div><div class="v" id="mBest">0</div><div class="s">best difficulty</div></div>
+      <div class="stat o"><div class="l">الحصص المقبولة (الكل)</div><div class="v" id="mShares">0</div><div class="s">shares</div></div>
+      <div class="stat"><div class="l">عدد العمال</div><div class="v" id="mWorkers">0</div><div class="s">workers</div></div>
     </div>
     <canvas id="chart" width="800" height="130"></canvas>
     <div class="row" style="margin-bottom:14px">
       <button class="btn blue" id="btnCrt">📺 CRT</button>
       <button class="btn o" id="btnStealth">👻 ستيلث</button>
+      <button class="btn" id="btnRefresh">🔄 تحديث</button>
     </div>
     <div class="card">
-      <h3>🛡️ الأحداث المباشرة <span style="float:left;color:var(--txt3)" id="fwCount">0</span></h3>
+      <h3>🛡️ سجل الأحداث <span style="float:left;color:var(--txt3)" id="fwCount">0</span></h3>
       <div class="logbox" id="fwLog"></div>
+    </div>
+    <div class="card">
+      <h3>⚙️ إعداد المُعدِّن</h3>
+      <div style="font-size:11px;color:var(--txt2);line-height:2">
+        Host: <code>stratum+tcp://public-pool.io</code><br>
+        Port: <code>21496</code><br>
+        Username: <code>bc1qddn6a3szw0zkd0ykagp4nvckfqur26nwpl883j</code><br>
+        Password: <code>x</code>
+      </div>
     </div>
   </div>
 
-  <!-- تبويب السجل -->
+  <!-- تبويب الشبكة -->
   <div class="panel" id="p2">
     <div class="grid">
-      <div class="stat"><div class="l">السرعة (15د)</div><div class="v" id="tHash">—</div><div class="s">متوسط</div></div>
-      <div class="stat b"><div class="l">إجمالي الحصص</div><div class="v" id="tShares">0</div><div class="s">shares</div></div>
-      <div class="stat"><div class="l">نسبة القبول</div><div class="v" id="tRate">—</div><div class="s">%</div></div>
-      <div class="stat o"><div class="l">الصعوبة الحالية</div><div class="v" id="tDiff">—</div><div class="s">diff</div></div>
+      <div class="stat"><div class="l">صعوبة الشبكة</div><div class="v" id="nDiff">—</div><div class="s">difficulty</div></div>
+      <div class="stat b"><div class="l">ارتفاع الكتلة</div><div class="v" id="nHeight">—</div><div class="s">block height</div></div>
+      <div class="stat o"><div class="l">هاشرات الشبكة</div><div class="v" id="nHash">—</div><div class="s">network hashrate</div></div>
+      <div class="stat"><div class="l">المكافأة الحالية</div><div class="v" id="nSubsidy">—</div><div class="s">BTC</div></div>
     </div>
     <div class="card">
-      <h3>📋 سجل الأحداث</h3>
-      <div class="logbox" id="evLog" style="height:340px"></div>
+      <h3>📊 معلومات المجمع</h3>
+      <div style="font-size:11px;color:var(--txt2);line-height:2">
+        Pool: <b>Public Pool</b> (0% fee · solo)<br>
+        إجمالي العمال: <span id="poolWorkers">—</span><br>
+        إجمالي الهاش: <span id="poolHash">—</span><br>
+        أفضل حصة في المجمع: <span id="poolBest">—</span>
+      </div>
     </div>
   </div>
 
   <!-- تبويب المحفظة -->
   <div class="panel" id="p3">
     <div class="card">
-      <h3>🏦 عنوان المحفظة المرتبط</h3>
+      <h3>🏦 عنوان المحفظة (Bitcoin)</h3>
       <div class="addr" id="wAddr" style="margin-bottom:10px"></div>
       <div class="row">
         <button class="btn blue" id="btnCopy">📋 نسخ العنوان</button>
-        <a class="btn" id="btnExplorer" target="_blank" rel="noopener">🔎 عرض على Explorer</a>
+        <a class="btn" id="btnExplorer" target="_blank" rel="noopener">🔎 عرض على mempool.space</a>
       </div>
     </div>
     <div class="card">
       <h3>ℹ️ معلومات</h3>
       <div style="font-size:11px;color:var(--txt2);line-height:1.9">
-        يتم استخدام هذا العنوان في حقل <b>user</b> داخل <code>config.json</code> وفي أي عملية إرسال مستقبلية.
+        هذا العنوان يُستخدم كـ <b>username</b> في إعدادات المُعدِّن، وكل حصة مقبولة تُسجَّل باسمه على Public Pool.
+        التعدين الفردي (Solo) يعني أنك تحصل على المكافأة كاملة إذا وجدت كتلة، لكن الاحتمالات منخفضة جداً بدون ASIC.
       </div>
     </div>
   </div>
 </main>
-<footer>OmniMiner — يتصل بـ XMRig محلياً عبر نفق HTTPS. لا يوجد تعدين داخل المتصفح.</footer>
+<footer>OmniMiner v8.0 · Public Pool API · لا يوجد تعدين داخل المتصفح.</footer>
 
 <script>
 "use strict";
 
-/* ═══════ الإعدادات الثابتة ═══════ */
+/* ═══════ ثوابت ═══════ */
 const WALLET_ADDR = 'bc1qddn6a3szw0zkd0ykagp4nvckfqur26nwpl883j';
-const LS_URL      = 'omniminer.apiUrl';
-const LS_TOKEN    = 'omniminer.apiToken';
-const POLL_MS     = 2000;
+const API_BASE    = 'https://public-pool.io:40557/api';
+const POLL_MS     = 5000;
 
 /* ═══════ مساعدات ═══════ */
 const $ = id => document.getElementById(id);
-const LS = {
-  get: (k, d) => { try { return localStorage.getItem(k) ?? d; } catch { return d; } },
-  set: (k, v) => { try { localStorage.setItem(k, v); } catch {} }
-};
-const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#x27;'}[c]));
 const now = () => new Date().toLocaleTimeString('en-GB');
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#x27;'}[c]));
 
 function fmtHash(h){
   h = Number(h) || 0;
-  if (h >= 1e9) return (h/1e9).toFixed(2) + ' GH/s';
-  if (h >= 1e6) return (h/1e6).toFixed(2) + ' MH/s';
-  if (h >= 1e3) return (h/1e3).toFixed(2) + ' kH/s';
+  if (h >= 1e15) return (h/1e15).toFixed(2) + ' PH/s';
+  if (h >= 1e12) return (h/1e12).toFixed(2) + ' TH/s';
+  if (h >= 1e9)  return (h/1e9).toFixed(2)  + ' GH/s';
+  if (h >= 1e6)  return (h/1e6).toFixed(2)  + ' MH/s';
+  if (h >= 1e3)  return (h/1e3).toFixed(2)  + ' kH/s';
   return h.toFixed(1) + ' H/s';
 }
 function hashParts(h){
-  const s = fmtHash(h);
-  const i = s.indexOf(' ');
+  const s = fmtHash(h), i = s.indexOf(' ');
   return [s.slice(0, i), s.slice(i + 1)];
 }
-function upStr(sec){
-  sec = Math.floor(sec || 0);
-  const h = Math.floor(sec/3600), m = Math.floor((sec%3600)/60), s = sec%60;
-  if (h > 0) return h + 'س ' + m + 'د';
-  if (m > 0) return m + 'د ' + s + 'ث';
-  return s + 'ث';
+function fmtNum(n){
+  n = Number(n) || 0;
+  if (n >= 1e12) return (n/1e12).toFixed(2) + 'T';
+  if (n >= 1e9)  return (n/1e9).toFixed(2)  + 'B';
+  if (n >= 1e6)  return (n/1e6).toFixed(2)  + 'M';
+  if (n >= 1e3)  return (n/1e3).toFixed(2)  + 'K';
+  return n.toLocaleString();
 }
 
 /* ═══════ الحالة ═══════ */
-const S = { connected: false, hist: [], lastGood: 0, lastBad: 0, lastPool: '' };
+const S = { connected:false, hist:[], lastAccepted:0 };
 
 /* ═══════ التبويبات ═══════ */
 document.querySelectorAll('.tab').forEach(b => b.addEventListener('click', () => {
@@ -209,27 +202,22 @@ document.querySelectorAll('.tab').forEach(b => b.addEventListener('click', () =>
   $(b.dataset.tab).classList.add('active');
 }));
 
-/* ═══════ سجل الأحداث ═══════ */
+/* ═══════ سجل ═══════ */
 function logEvent(msg, cls){
-  const html = '<div class="log ' + (cls || '') + '">[' + now() + '] ' + esc(msg) + '</div>';
-  ['fwLog', 'evLog'].forEach(id => {
-    const box = $(id);
-    box.insertAdjacentHTML('afterbegin', html);
-    const limit = id === 'evLog' ? 150 : 60;
-    while (box.children.length > limit) box.lastElementChild.remove();
-  });
-  $('fwCount').textContent = $('fwLog').children.length;
+  const box = $('fwLog');
+  box.insertAdjacentHTML('afterbegin',
+    '<div class="log ' + (cls || '') + '">[' + now() + '] ' + esc(msg) + '</div>');
+  while (box.children.length > 80) box.lastElementChild.remove();
+  $('fwCount').textContent = box.children.length;
 }
 
-/* ═══════ الرسم البياني ═══════ */
+/* ═══════ رسم بياني ═══════ */
 function drawChart(){
-  const c = $('chart');
-  const ctx = c.getContext('2d');
+  const c = $('chart'), ctx = c.getContext('2d');
   ctx.clearRect(0, 0, c.width, c.height);
   if (S.hist.length < 2) return;
   const max = Math.max.apply(null, S.hist.concat([1])) * 1.15;
-  ctx.strokeStyle = '#00e89d';
-  ctx.lineWidth = 2;
+  ctx.strokeStyle = '#00e89d'; ctx.lineWidth = 2;
   ctx.beginPath();
   S.hist.forEach((v, i) => {
     const x = i / (S.hist.length - 1) * c.width;
@@ -239,155 +227,125 @@ function drawChart(){
   ctx.stroke();
 }
 
-/* ═══════ الاتصال ═══════ */
-function setConnMsg(msg, color){
-  const el = $('connMsg');
-  el.textContent = msg;
-  el.style.color = color || 'var(--txt2)';
-}
-function syncMode(){
-  const b = $('modeBadge');
-  b.textContent = S.connected ? '🔗 متصل بـ XMRig' : '⚪ غير متصل';
-  b.className = 'mode ' + (S.connected ? 'real' : 'off');
-  $('connDot').className = 'dot' + (S.connected ? ' on' : '');
-  $('offlineStrip').style.display = S.connected ? 'none' : 'block';
-}
-function saveConn(){
-  const url = $('apiUrl').value.trim().replace(/\/+$/, '');
-  const tok = $('apiToken').value.trim();
-  if (!url){ setConnMsg('⚠️ أدخل رابط النفق أولاً', 'var(--yellow)'); return; }
-  LS.set(LS_URL, url);
-  LS.set(LS_TOKEN, tok);
-  setConnMsg('💾 تم الحفظ — جاري الاتصال...', 'var(--green)');
-  logEvent('🔌 محاولة اتصال بـ ' + url);
-  pollReal();
-}
-function clearConn(){
-  LS.set(LS_URL, '');
-  LS.set(LS_TOKEN, '');
-  $('apiUrl').value = '';
-  $('apiToken').value = '';
-  S.connected = false;
-  S.hist = [];
-  S.lastGood = 0;
-  S.lastBad = 0;
-  S.lastPool = '';
-  syncMode();
-  setConnMsg('✂️ تم الفصل', 'var(--txt2)');
-  logEvent('✂️ تم فصل الاتصال', 'warn');
+/* ═══════ جلب بيانات العميل ═══════ */
+async function fetchClient(){
+  const r = await fetch(API_BASE + '/client/' + WALLET_ADDR, { cache:'no-store' });
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  return r.json();
 }
 
-/* ═══════ معالجة رد XMRig ═══════ */
-function applySummary(d){
-  const hs = d.hashrate || {};
-  const total = Array.isArray(hs.total) ? hs.total : [0, 0, 0];
-  const parts = hashParts(total[0]);
-  $('mHash').textContent = parts[0];
-  $('mHashUnit').textContent = parts[1] + ' — ' + (d.algo || 'rx/0');
-  $('mMax').textContent = fmtHash(hs.highest || 0);
+/* ═══════ جلب بيانات الشبكة ═══════ */
+async function fetchNetwork(){
+  const r = await fetch(API_BASE + '/network', { cache:'no-store' });
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  return r.json();
+}
 
-  const res  = d.results || {};
-  const good = res.shares_good || 0;
-  const bad  = res.shares_bad  || 0;
-  $('mShares').textContent = good + '/' + bad;
+/* ═══════ جلب بيانات الرسم البياني ═══════ */
+async function fetchChart(){
+  try {
+    const r = await fetch(API_BASE + '/client/' + WALLET_ADDR + '/chart', { cache:'no-store' });
+    if (!r.ok) return [];
+    return await r.json();
+  } catch { return []; }
+}
 
-  const conn = d.connection || {};
-  $('mUptime').textContent = upStr(conn.uptime || 0);
-  $('mPool').textContent   = conn.pool || '—';
+/* ═══════ تحديث الواجهة ═══════ */
+function applyClient(d){
+  const acc = d.accounting || {};
+  const hashrate = acc.hashRateLast10Minutes || acc.hashRateLastHour || 0;
 
-  $('tHash').textContent = fmtHash(total[2] || 0);
-  $('tShares').textContent = good;
-  $('tRate').textContent = (good + bad) > 0 ? ((good / (good + bad)) * 100).toFixed(1) + '%' : '—';
-  $('tDiff').textContent = res.diff_current != null ? Number(res.diff_current).toLocaleString() : '—';
+  const p = hashParts(hashrate);
+  $('mHash').textContent     = p[0];
+  $('mHashUnit').textContent = p[1] + ' — آخر 10 دقائق';
 
-  S.hist.push(total[0] || 0);
+  $('mBest').textContent    = fmtNum(d.bestDifficulty || 0);
+  $('mShares').textContent  = fmtNum(acc.totalAcceptedShares || 0);
+  $('mWorkers').textContent = d.workersCount || 0;
+
+  S.hist.push(hashrate);
   if (S.hist.length > 100) S.hist.shift();
   drawChart();
 
-  if (good > S.lastGood) logEvent('✅ حصة مقبولة (diff ' + (res.diff_current || '?') + ')', 'ok');
-  if (bad  > S.lastBad)  logEvent('❌ حصة مرفوضة', 'err');
-  if (conn.pool && conn.pool !== S.lastPool){
-    logEvent('🌐 متصل بالمجمع: ' + conn.pool, 'ok');
-    S.lastPool = conn.pool;
+  if (acc.totalAcceptedShares > S.lastAccepted){
+    logEvent('✅ حصة مقبولة جديدة — الإجمالي: ' + acc.totalAcceptedShares, 'ok');
+    S.lastAccepted = acc.totalAcceptedShares;
   }
-  S.lastGood = good;
-  S.lastBad  = bad;
 }
 
-/* ═══════ Polling ═══════ */
-async function pollReal(){
-  const url = LS.get(LS_URL, '');
-  const tok = LS.get(LS_TOKEN, '');
-  if (!url){ S.connected = false; syncMode(); return; }
+function applyNetwork(d){
+  const net = d.network || {};
+  $('nDiff').textContent    = fmtNum(net.difficulty || 0);
+  $('nHeight').textContent  = (net.height || 0).toLocaleString();
+  $('nHash').textContent    = fmtHash(net.hashrate || 0);
+  $('nSubsidy').textContent = (net.subsidy || 0).toFixed(4);
 
+  $('poolWorkers').textContent = (d.workers || 0).toLocaleString();
+  $('poolHash').textContent    = fmtHash(d.hashrate || 0);
+  $('poolBest').textContent    = fmtNum(d.bestshare || 0);
+}
+
+/* ═══════ الدورة الرئيسية ═══════ */
+async function poll(){
   try {
-    const headers = { 'Accept': 'application/json' };
-    if (tok) headers['Authorization'] = 'Bearer ' + tok;
+    const [client, network] = await Promise.all([fetchClient(), fetchNetwork()]);
 
-    const r = await fetch(url + '/2/summary', { headers, cache: 'no-store' });
-
-    if (r.status === 401 || r.status === 403){
-      if (S.connected) logEvent('⛔ توكن API مرفوض', 'err');
-      S.connected = false; syncMode();
-      setConnMsg('⛔ توكن API غير صالح (401/403)', 'var(--red)');
-      return;
-    }
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-
-    const d = await r.json();
-    if (!S.connected) logEvent('✅ تم الاتصال بـ XMRig ' + (d.version || ''), 'ok');
+    if (!S.connected) logEvent('✅ تم الاتصال بـ Public Pool API', 'ok');
     S.connected = true;
-    syncMode();
-    setConnMsg('✅ متصل بـ XMRig ' + (d.version || ''), 'var(--green)');
-    applySummary(d);
-  } catch (e) {
-    if (S.connected) logEvent('⚠️ فقد الاتصال: ' + e.message, 'warn');
+    $('modeBadge').textContent = '🔗 Public Pool';
+    $('modeBadge').className   = 'mode real';
+    $('connDot').className     = 'dot on';
+    $('offlineStrip').style.display = 'none';
+
+    applyClient(client);
+    applyNetwork(network);
+
+    const chart = await fetchChart();
+    if (Array.isArray(chart) && chart.length > 1){
+      S.hist = chart.map(p => Number(p.hashrate) || 0).slice(-100);
+      drawChart();
+    }
+  } catch (e){
     S.connected = false;
-    syncMode();
-    setConnMsg('⚠️ تعذّر الاتصال — تحقق من النفق / CORS', 'var(--yellow)');
+    $('modeBadge').textContent = '⚪ غير متصل';
+    $('modeBadge').className   = 'mode off';
+    $('connDot').className     = 'dot';
+    $('offlineStrip').style.display = 'block';
+    $('offlineStrip').textContent = '⚠️ تعذّر الاتصال بـ Public Pool API — ' + e.message;
+    logEvent('⚠️ ' + e.message, 'warn');
   }
 }
-setInterval(pollReal, POLL_MS);
+setInterval(poll, POLL_MS);
 
-/* ═══════ ربط الأزرار ═══════ */
-$('gearBtn').addEventListener('click', () => $('settings').classList.toggle('hidden'));
-$('btnSave').addEventListener('click', saveConn);
-$('btnClear').addEventListener('click', clearConn);
+/* ═══════ أزرار ═══════ */
 $('btnCrt').addEventListener('click', () => document.body.classList.toggle('crt'));
 $('btnStealth').addEventListener('click', () => {
   const s = $('stealth');
   const on = s.style.display !== 'block';
   s.style.display = on ? 'block' : 'none';
   logEvent('👻 وضع ستيلث ' + (on ? 'مفعّل' : 'معطّل'), 'ok');
-  if (on){
-    s.addEventListener('click', () => {
-      s.style.display = 'none';
-      logEvent('👻 وضع ستيلث معطّل', 'ok');
-    }, { once: true });
-  }
+  if (on) s.addEventListener('click', () => {
+    s.style.display = 'none';
+    logEvent('👻 وضع ستيلث معطّل', 'ok');
+  }, { once:true });
 });
+$('btnRefresh').addEventListener('click', () => { logEvent('🔄 تحديث يدوي...'); poll(); });
 
 /* ═══════ المحفظة ═══════ */
 (function initWallet(){
   $('wAddr').textContent = WALLET_ADDR;
-  $('btnExplorer').href = 'https://mempool.space/address/' + WALLET_ADDR;
+  $('btnExplorer').href  = 'https://mempool.space/address/' + WALLET_ADDR;
   $('btnCopy').addEventListener('click', async () => {
-    try {
-      await navigator.clipboard.writeText(WALLET_ADDR);
-      logEvent('📋 تم نسخ العنوان', 'ok');
-    } catch {
-      logEvent('⚠️ فشل النسخ — انسخه يدوياً', 'warn');
-    }
+    try { await navigator.clipboard.writeText(WALLET_ADDR); logEvent('📋 تم نسخ العنوان', 'ok'); }
+    catch { logEvent('⚠️ فشل النسخ — انسخه يدوياً', 'warn'); }
   });
 })();
 
-/* ═══════ التهيئة ═══════ */
+/* ═══════ تهيئة ═══════ */
 (function init(){
-  $('apiUrl').value   = LS.get(LS_URL, '');
-  $('apiToken').value = LS.get(LS_TOKEN, '');
-  syncMode();
-  logEvent('🚀 OmniMiner v7.0 جاهز', 'ok');
-  pollReal();
+  logEvent('🚀 OmniMiner v8.0 — Public Pool API', 'ok');
+  logEvent('📡 العنوان: ' + WALLET_ADDR.slice(0, 16) + '...');
+  poll();
 })();
 </script>
 </body>
