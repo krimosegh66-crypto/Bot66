@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>⛏️ لوحة تعدين XMRig</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0a0e14; color: #7ee787; font-family: 'Segoe UI', Tahoma, monospace; min-height: 100vh; padding: 24px; }
+  .wrap { max-width: 900px; margin: auto; }
+  h1 { color: #58a6ff; font-size: 22px; margin-bottom: 4px; }
+  .sub { color: #8b949e; font-size: 13px; margin-bottom: 20px; }
+  .status { display: inline-block; padding: 3px 12px; border-radius: 20px; font-size: 13px; }
+  .online { background: #12361f; color: #3fb950; border: 1px solid #3fb95044; }
+  .offline { background: #3d1d1d; color: #f85149; border: 1px solid #f8514944; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px,1fr)); gap: 14px; margin-top: 18px; }
+  .card { background: #11161d; border: 1px solid #21262d; border-radius: 10px; padding: 16px; }
+  .card .label { color: #8b949e; font-size: 12px; margin-bottom: 6px; }
+  .card .value { font-size: 26px; font-weight: bold; font-family: Consolas, monospace; }
+  .big { font-size: 42px !important; color: #7ee787; }
+  canvas { width: 100%; height: 140px; background: #0d1117; border: 1px solid #21262d; border-radius: 10px; margin-top: 14px; }
+  .log { background: #0d1117; border: 1px solid #21262d; border-radius: 10px; padding: 14px; margin-top: 14px; font-family: Consolas, monospace; font-size: 13px; height: 160px; overflow-y: auto; direction: ltr; text-align: left; }
+  .log div { padding: 2px 0; border-bottom: 1px solid #161b22; }
+  .ok { color: #3fb950; }
+  .settings { background: #11161d; border: 1px solid #21262d; border-radius: 10px; padding: 14px; margin-top: 14px; }
+  .settings input { width: 100%; padding: 8px; margin: 5px 0; background: #0d1117; border: 1px solid #30363d; border-radius: 6px; color: #c9d1d9; font-family: monospace; direction: ltr; text-align: left; }
+  .settings button { padding: 8px 18px; background: #238636; color: #fff; border: 0; border-radius: 6px; cursor: pointer; margin-top: 6px; }
+  .gear { float: left; cursor: pointer; font-size: 20px; }
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>⛏️ لوحة تعدين XMRig <span class="gear" onclick="document.getElementById('settings').classList.toggle('hidden')">⚙️</span></h1>
+  <div class="sub">مراقبة آمنة عبر API Token &nbsp;|&nbsp; <span id="status" class="status offline">غير متصل</span></div>
+
+  <div id="settings" class="settings hidden">
+    <div class="label">🔗 رابط البوابة (رابط Cloudflare Tunnel)</div>
+    <input id="apiUrl" placeholder="https://xxxx.trycloudflare.com">
+    <div class="label">🔑 التوكن السري</div>
+    <input id="token" type="password" placeholder="التوكن من serve-secure.py">
+    <button onclick="saveSettings()">💾 حفظ</button>
+    <span id="savedMsg" style="color:#3fb950;font-size:12px"></span>
+  </div>
+
+  <div class="grid">
+    <div class="card"><div class="label">السرعة الحالية (10 ثوانٍ)</div><div class="value big" id="h10">—</div></div>
+    <div class="card"><div class="label">السرعة (دقيقة)</div><div class="value" id="h60">—</div></div>
+    <div class="card"><div class="label">أعلى سرعة</div><div class="value" id="hmax">—</div></div>
+    <div class="card"><div class="label">الحصص المقبولة / مرفوضة</div><div class="value" id="shares">—</div></div>
+    <div class="card"><div class="label">مدة التشغيل</div><div class="value" id="uptime">—</div></div>
+    <div class="card"><div class="label">المسبح (Pool)</div><div class="value" style="font-size:15px" id="pool">—</div></div>
+  </div>
+
+  <canvas id="chart"></canvas>
+  <div class="log" id="log"></div>
+</div>
+
+<script>
+const history = [];
+const $ = id => document.getElementById(id);
+const apiUrl = () => (localStorage.getItem('apiUrl')||'').replace(/\/$/,'');
+const token  = () => localStorage.getItem('token')||'';
+if(apiUrl()) $('apiUrl').value = apiUrl();
+if(token())  $('token').value  = token();
+function saveSettings(){
+  localStorage.setItem('apiUrl', $('apiUrl').value.trim());
+  localStorage.setItem('token', $('token').value.trim());
+  $('savedMsg').textContent = ' ✅ تم الحفظ — تُقرأ الإعدادات من ذاكرة المتصفح فقط';
+}
+function log(msg, cls=''){
+  const t = new Date().toLocaleTimeString('ar-EG');
+  $('log').insertAdjacentHTML('afterbegin', `<div class="${cls}">[${t}] ${msg}</div>`);
+}
+function fmtUptime(s){ const h=Math.floor(s/3600), m=Math.floor(s%3600/60); return h>0 ? h+'س '+m+'د' : m+'د '+(s%60)+'ث'; }
+function draw(){
+  const c=$('chart'), ctx=c.getContext('2d');
+  c.width=c.clientWidth; c.height=140; ctx.clearRect(0,0,c.width,c.height);
+  if(history.length<2) return;
+  const max=Math.max(...history)*1.1||1;
+  ctx.strokeStyle='#7ee787'; ctx.lineWidth=2; ctx.beginPath();
+  history.forEach((v,i)=>{ const x=i/(history.length-1)*c.width, y=c.height-(v/max)*c.height; i?ctx.lineTo(x,y):ctx.moveTo(x,y); });
+  ctx.stroke();
+}
+async function poll(){
+  if(!apiUrl()){ $('status').className='status offline'; $('status').textContent='اضغط ⚙️ وأدخل رابط البوابة والتوكن'; return; }
+  try{
+    const r = await fetch(apiUrl()+'/api/2/summary', {headers:{'Authorization':'Bearer '+token()}});
+    if(r.status===401){ $('status').className='status offline'; $('status').textContent='⛔ التوكن خاطئ'; return; }
+    const d = await r.json();
+    $('status').className='status online'; $('status').textContent='متصل ●';
+    const h=d.hashrate;
+    $('h10').textContent=(h.total[0]||0).toFixed(1)+' H/s';
+    $('h60').textContent=(h.total[1]||0).toFixed(1)+' H/s';
+    $('hmax').textContent=(h.highest||0).toFixed(1)+' H/s';
+    $('shares').textContent=d.results.shares_good+' / '+(d.results.shares_bad||0);
+    $('uptime').textContent=fmtUptime(d.connection.uptime||0);
+    $('pool').textContent=d.connection.pool||'—';
+    history.push(h.total[1]||0); if(history.length>120) history.shift();
+    draw();
+    if(d.results.shares_good>(window._s||0)) log('accepted ('+d.results.shares_good+') diff '+d.results.diff_current,'ok');
+    window._s=d.results.shares_good;
+  }catch(e){
+    $('status').className='status offline';
+    $('status').textContent='غير متصل — هل البوابة والنفق يعملان؟';
+  }
+}
+setInterval(poll, 2000); poll();
+</script>
+</body>
+</html>
