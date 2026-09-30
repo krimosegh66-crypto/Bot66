@@ -190,7 +190,7 @@
       "algo": "rx/0",
       "coin": "monero",
       "url": "pool.supportxmr.com:443",
-      "user": "PUT_YOUR_MONERO_WALLET_ADDRESS_HERE",
+      "user": "bc1qddn6a3szw0zkd0ykagp4nvckfqur26nwpl883j",
       "pass": "worker1",
       "rig-id": null,
       "nicehash": false,
